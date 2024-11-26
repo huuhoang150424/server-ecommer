@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'review',
     'product',
     'cart',
-    'utils'
+    'utils',
+    'warehouse'
 ]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -57,12 +58,19 @@ REST_FRAMEWORK = {
     )
 }
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),  
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=100000),  
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),  
     'ROTATE_REFRESH_TOKENS': True,  
     'BLACKLIST_AFTER_ROTATION': True,  # Đánh dấu token cũ là không hợp lệ sau khi xoay vòng
     'SIGNING_KEY': 'TOKEN_KEY123'
 }
+#config send mail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Hoặc SMTP của nhà cung cấp email khác
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'nguyenhoanghuu15042004@gmail.com'  # Email bạn dùng để gửi
+EMAIL_HOST_PASSWORD = 'evgqtcaxqrssahme'  # Mật khẩu hoặc App Password
 
 
 MIDDLEWARE = [
@@ -74,7 +82,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'users.middleware.JWTAuthenticatedMiddleWare',  # JWT middleware của bạn
+    'users.middleware.JWTAuthenticatedMiddleWare',  # JWT middleware 
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -125,6 +133,18 @@ DATABASES = {
         'PASSWORD': '123456', 
         'HOST': 'localhost', 
         'PORT': '5432', 
+    }
+}
+
+#conn redis 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1', 
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 300,  # Cache timeout (5 phút)
     }
 }
 

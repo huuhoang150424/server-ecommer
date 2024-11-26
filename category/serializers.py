@@ -3,11 +3,12 @@ from .models import CategoryModel
 
 
 class createCatSerializers(serializers.ModelSerializer):
-    category_name=serializers.CharField(max_length=15,write_only=True)
+    category_name=serializers.CharField(max_length=50,write_only=True)
     class Meta:
         model=CategoryModel
         fields=['category_name','image']
     def create(self,data):
+        print("data", data)
         newCategory=CategoryModel.objects.create(**data)
         return newCategory
     def validate(self,validated_data):
@@ -20,27 +21,31 @@ class getAllCatSerializers(serializers.ModelSerializer):
         model=CategoryModel
         fields=['id','category_name','image']
 
+class getAllProductByCatSerializers(serializers.ModelSerializer):
+    class Meta:
+        model=CategoryModel
+        fields=['id','category_name','image']
+
 
 class GetCatSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoryModel
-        fields = ['category_name', 'image']
+        fields = ['id','category_name', 'image']
 
     def validate(self, validated_data):
-        # Lấy catId từ context
         catId = self.context.get('catId')
-
-        # Kiểm tra nếu catId không tồn tại trong cơ sở dữ liệu
         if not CategoryModel.objects.filter(id=catId).exists():
             raise serializers.ValidationError("Danh mục không tồn tại")
-        
         return validated_data
 
 class updateCatSerializers(serializers.ModelSerializer):
+    category_name=serializers.CharField(max_length=50,write_only=True)
     class Meta:
         model=CategoryModel
         fields=['category_name','image']
 
     def validate(self,validated_data):
+        catId=self.context.get('catId')
+        if not CategoryModel.objects.filter(id=catId).exists():
+            raise serializers.ValidationError("Danh mục không tồn tại")
         return validated_data
-

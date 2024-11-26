@@ -14,8 +14,6 @@ class JWTAuthenticatedMiddleWare:
 
     def __call__(self, request):
         token = request.headers.get('token')
-        print(request.headers)
-        print("check ",token)
         if token and token.startswith('Bearer '):
             try:
                 JWTToken = token.split(' ')[1]
@@ -29,7 +27,6 @@ class JWTAuthenticatedMiddleWare:
                     cache.set(f"user_{user_id}", user, timeout=60*60)
                 request.user = user
                 request._user = user
-                print("user ",user)
             except Exception as e:
                 request.user = None
                 request._user = None
