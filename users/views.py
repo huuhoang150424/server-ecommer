@@ -101,10 +101,10 @@ def verifyCode(request):
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()  
-            return Response({"message": "Mã OTP hợp lệ và đã được xác thực."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return SuccessResponse({"message": "Mã OTP hợp lệ và đã được xác thực."}, status=status.HTTP_200_OK)
+        return ErrorResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response(
+        return ErrorResponse(
             {"error_message": str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -116,13 +116,13 @@ def forgotPassword(request):
         serializer = ForgotPasswordSerializer(data=request.data)
         if serializer.is_valid():
             result = serializer.save()
-            return Response({
+            return SuccessResponse({
                 'message': 'Gửi mail thành công',
                 'data': result
             }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return ErrorResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response(
+        return ErrorResponse(
             {"error_message": str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

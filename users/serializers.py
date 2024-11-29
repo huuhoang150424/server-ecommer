@@ -158,7 +158,8 @@ class ForgotPasswordSerializer(serializers.Serializer):
         )
         return {
             "message": "Mã OTP đã được gửi qua email.",
-            "expiration": expiration_time
+            "expiration": expiration_time,
+            "email": email
         }
 
 class VerifyOTPSerializer(serializers.Serializer):
