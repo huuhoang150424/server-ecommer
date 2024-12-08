@@ -33,6 +33,20 @@ def getAllProducts(request):
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+@api_view(['GET'])
+@user_required  
+def getProductRecent(request):
+    try:
+        allProduct=ProductModel.objects.order_by('-created_at')[:10]
+        product_serializer=getAllProductRecentSerializers(allProduct,many=True)
+        return SuccessResponse({
+            'data': product_serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['GET'])
 @user_required  
 def getProduct(request,slug):
@@ -42,6 +56,26 @@ def getProduct(request,slug):
         return SuccessResponse({
             'data': product_serializer.data
         }, status=status.HTTP_200_OK) 
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@user_required  
+def getProductClient(request, id):
+    try:
+        product = ProductModel.objects.prefetch_related(
+            'product_attributes__attribute', 'ratings'
+        ).select_related('category').get(id=id)
+
+        product_serializer = getProductSerializerClient(product, context={'user': request.user})
+
+
+        return SuccessResponse({
+            'data': product_serializer.data
+        }, status=status.HTTP_200_OK)
+    except ProductModel.DoesNotExist:
+        return ErrorResponse(error_message="Sản phẩm không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -57,9 +91,9 @@ def createProduct(request):
                 {'message': 'Tạo sản phẩm mới thành công'}, 
                 status=status.HTTP_201_CREATED
             )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return ErrorResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response(
+        return ErrorResponse(
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -190,5 +224,68 @@ def deleteAttribute(request,id):
         return SuccessResponse({
             'message': 'Xóa thuộc tính thành công'
         }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+#favorite product
+@api_view(['POST'])
+@user_required  
+def addFavoriteProduct(request):
+    try:
+        user = request.user
+        product_id = request.data.get('productId') 
+        product = ProductModel.objects.get(id=product_id)
+        add_product_favorite_serializer = productFavorite(data={'user': user.id, 'product': product.id})
+        if add_product_favorite_serializer.is_valid():
+            add_product_favorite_serializer.save()
+            return SuccessResponse(
+                {'message': 'Thêm sản phẩm yêu thích thành công'}, 
+                status=status.HTTP_201_CREATED
+            )
+        
+        return ErrorResponse(
+            {'errors': add_product_favorite_serializer.errors, 'message': 'Thêm sản phẩm yêu thích thất bại'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@user_required
+def removeFavoriteProduct(request):
+    try:
+        user = request.user
+        product_id = request.data.get('productId')
+        if not product_id:
+            return Response({"message": "Vui lòng cung cấp ID sản phẩm."}, status=status.HTTP_400_BAD_REQUEST)
+        favorite_product = FavoriteProductModel.objects.filter(user=user, product_id=product_id)
+        if favorite_product.exists():
+            favorite_product.delete()
+            return SuccessResponse(
+                {'message': 'Xóa sản phẩm yêu thích thành công'},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return ErrorResponse(
+                {'message': 'Sản phẩm yêu thích không tồn tại'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@user_required  
+def getAllFavoriteProduct(request):
+    try:
+        user = request.user
+        allFavoriteProduct=FavoriteProductModel.objects.filter(user=user)
+        serializers=getAllProductFavorite(allFavoriteProduct,many=True)
+        return SuccessResponse(
+            {'message': 'Thành công', 'data': serializers.data}, 
+            status=status.HTTP_200_OK
+        )
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

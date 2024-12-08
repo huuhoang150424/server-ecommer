@@ -54,19 +54,14 @@ def createCat(request):
 @admin_required
 def deleteCat(request, catId):
     try:
-        if not CategoryModel.objects.filter(id=catId).exists():
-            return ErrorResponse(
-                {'message': 'Danh mục không tồn tại'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
         category = CategoryModel.objects.get(id=catId)
         category.delete()
-        
         return SuccessResponse(
             {'message': 'Danh mục đã được xóa thành công'},
             status=status.HTTP_200_OK
         )
+    except CategoryModel.DoesNotExist:
+        return ErrorResponse({'message':'Danh mục không tồn tại'},status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

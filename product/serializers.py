@@ -1,6 +1,8 @@
 from rest_framework  import serializers
 from .models import ProductModel,AttributesModel,ProductAttributesModel,FavoriteProductModel,StatusChoices
 from category.serializers import GetCatSerializer
+from review.serializers import getCommentSerializer,getRatingSerializer
+from django.db.models import Avg
 
 
 class createProductSerializers(serializers.ModelSerializer):
@@ -62,6 +64,12 @@ class getAllProductSerializers(serializers.ModelSerializer):
         fields='__all__'
 
 
+class getAllProductRecentSerializers(serializers.ModelSerializer):
+    class Meta:
+        model=ProductModel
+        fields='__all__'
+
+
 class ProductAttributeSerializer(serializers.ModelSerializer):
     attribute_name = serializers.CharField(source='attribute.attribute_name')
 
@@ -72,6 +80,8 @@ class ProductAttributeSerializer(serializers.ModelSerializer):
 class getProductSerializer(serializers.ModelSerializer):
     category = GetCatSerializer(read_only=True)
     product_attributes = ProductAttributeSerializer(many=True, read_only=True)
+
+
     class Meta:
         model=ProductModel
         fields = [
@@ -81,6 +91,33 @@ class getProductSerializer(serializers.ModelSerializer):
         ]
 
 
+
+class getProductSerializerClient(serializers.ModelSerializer):
+    category = GetCatSerializer(read_only=True)
+    product_attributes = ProductAttributeSerializer(many=True, read_only=True)
+    is_favorite = serializers.SerializerMethodField()  
+    ratings = getRatingSerializer(many=True, read_only=True)  
+    average_rating=serializers.SerializerMethodField()
+    class Meta:
+        model = ProductModel
+        fields = [
+            'id', 'slug', 'product_name', 'price', 'thumb_image', 'stock',
+            'image_urls', 'description', 'status', 'category','created_at', 
+            'updated_at',  'is_favorite', 'ratings','product_attributes',
+            'average_rating'
+        ]
+    def get_average_rating(self, obj):
+        ratings_qs = obj.ratings.all()
+        if ratings_qs.exists():
+            average_rating = ratings_qs.aggregate(Avg('rating'))['rating__avg']
+            return average_rating
+        return None
+
+    def get_is_favorite(self, obj):
+        user = self.context.get('user')  
+        if not user:
+            return False
+        return FavoriteProductModel.objects.filter(user=user, product=obj).exists()
 
 
 
@@ -182,3 +219,25 @@ class updateAttributesSerializers(serializers.ModelSerializer):
             raise serializers.ValidationError('Thuộc tính này không tồn tại')
 
         return data
+
+
+
+
+class productFavorite(serializers.ModelSerializer):
+    class Meta:
+        model = FavoriteProductModel
+        fields = ['id', 'user', 'product', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate(self, data):
+        if FavoriteProductModel.objects.filter(user=data['user'], product=data['product']).exists():
+            raise serializers.ValidationError("Sản phẩm này đã được yêu thích bởi người dùng này.")
+        return data
+    def create(self, data):
+        return FavoriteProductModel.objects.create(**data)
+
+class getAllProductFavorite(serializers.ModelSerializer):
+    class Meta:
+        model = FavoriteProductModel
+        fields = ['id', 'user', 'product']
+

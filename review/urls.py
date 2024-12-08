@@ -4,5 +4,9 @@ from .views import *
 
 urlpatterns = [
 
-    # path("createProduct",createProduct,name="createProduct")
+    path("ratingProduct/<uuid:productId>",ratingProduct,name="ratingProduct"),
+    path("comment/<uuid:productId>",comment,name="comment"),
+    path("getCommentProduct/<uuid:productId>",getCommentProduct,name="getCommentProduct"),
+    path("updateComment/<uuid:id>",updateComment,name="updateComment"),
+    path("deleteComment/<uuid:id>",deleteComment,name="deleteComment"),
 ]
