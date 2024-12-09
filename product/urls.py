@@ -20,4 +20,8 @@ urlpatterns = [
     path("addFavoriteProduct",addFavoriteProduct,name="addFavoriteProduct"),
     path("removeFavoriteProduct",removeFavoriteProduct,name="removeFavoriteProduct"),
     path("getAllFavoriteProduct",getAllFavoriteProduct,name="getAllFavoriteProduct"),
+
+    #search product
+    path("similar",similar,name="similar"),
+    path("search",search,name="search"),
 ]

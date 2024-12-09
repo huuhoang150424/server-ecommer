@@ -90,6 +90,15 @@ class getProductSerializer(serializers.ModelSerializer):
             'product_attributes', 'created_at', 'updated_at'
         ]
 
+class searchProductSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model=ProductModel
+        fields = [
+            'id', 'slug', 'product_name', 'price', 'thumb_image', 'stock',
+            'image_urls', 'description', 'status', 'created_at', 'updated_at'
+        ]
+
 
 
 class getProductSerializerClient(serializers.ModelSerializer):

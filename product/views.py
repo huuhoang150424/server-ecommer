@@ -34,6 +34,41 @@ def getAllProducts(request):
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+#search list key product
+@api_view(['GET'])
+@user_required
+def similar(request):
+    try:
+        keyword = request.GET.get('keyword', '').lower()
+        if not keyword:
+            return Response({"error": "Keyword parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+        products = ProductModel.objects.filter(product_name__icontains=keyword)
+        if not products.exists():
+            return SuccessResponse({"result": []}, status=status.HTTP_200_OK)
+        list_keyword = [product.product_name for product in products]
+        return SuccessResponse({
+            'data': list_keyword
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse({"success": False, "status": 500, "error_message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+#search  key product
+@api_view(['GET'])
+@user_required  
+def search(request):
+    try:
+        slug=request.GET.get('slug','').lower()
+        product=ProductModel.objects.get(slug=slug)
+        product_serializer=searchProductSerializer(product)
+        return SuccessResponse({
+            'data': product_serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 @api_view(['GET'])
 @user_required  
@@ -67,10 +102,7 @@ def getProductClient(request, id):
         product = ProductModel.objects.prefetch_related(
             'product_attributes__attribute', 'ratings'
         ).select_related('category').get(id=id)
-
         product_serializer = getProductSerializerClient(product, context={'user': request.user})
-
-
         return SuccessResponse({
             'data': product_serializer.data
         }, status=status.HTTP_200_OK)
@@ -289,3 +321,6 @@ def getAllFavoriteProduct(request):
         )
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
