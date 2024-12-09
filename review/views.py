@@ -8,7 +8,7 @@ from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
 from .models import  RatingModel,CommentModel
 from django.shortcuts import get_object_or_404
-
+from rest_framework.pagination import LimitOffsetPagination
 
 @api_view(['POST'])
 def ratingProduct(request, productId):
@@ -53,16 +53,26 @@ def comment(request, productId):
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class CommentPagination(LimitOffsetPagination):
+    default_limit = 5  
+    max_limit = 30
+
 @api_view(['GET'])
 def getCommentProduct(request, productId):
     try:
-        comments = CommentModel.objects.filter(product=productId).select_related('user')
+        comments = CommentModel.objects.filter(product=productId).select_related('user').order_by('-created_at')
+        
+        paginator = CommentPagination()
+        paginated_comments = paginator.paginate_queryset(comments, request)
 
-        serializer = getCommentSerializer(comments,many=True)
+        serializer = getCommentSerializer(paginated_comments, many=True)
+
         return SuccessResponse({
-            'data': serializer.data,
-            'message': 'Thành công'
-        },status=status.HTTP_200_OK)
+            'results': serializer.data,
+            'has_next': paginator.get_next_link() is not None,
+            'next_offset': paginator.offset + paginator.limit if paginator.get_next_link() else None,
+            'count': len(comments),
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -89,7 +99,11 @@ def updateComment(request, id):
 @api_view(['DELETE'])
 def deleteComment(request, id):
     try:
+        user =request.user
         comment = CommentModel.objects.get(id=id)
+        print(comment.user.id)
+        if comment.user.id!=user.id:
+            return ErrorResponse({'message': 'Bạn không thể xóa bình luận của người khác'}, status=status.HTTP_400_BAD_REQUEST)
         comment.delete()
         return SuccessResponse({
             'message': 'Xóa bình luận thành công'
