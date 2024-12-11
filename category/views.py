@@ -24,7 +24,7 @@ def getAllCat(request):
                 'totalPages': 1,
                 'pageSize': len(allCategory),
                 'data': category_serializer.data
-            })
+            },status=status.HTTP_200_OK)
         category_serializer = getAllCatSerializers(paginated_data, many=True)
         return paginator.get_pagination_response(category_serializer.data)
     except Exception as e:
@@ -93,22 +93,17 @@ def getCat(request, catId):
 @admin_required
 def updateCat(request,catId):
     try: 
+
         category = CategoryModel.objects.get(id=catId)
-        serializer = updateCatSerializers(
-            instance=category,  
-            data=request.data, 
-            context={'catId': catId}  
-        )
-        if serializer.is_valid():
-            serializer.save() 
-            return Response({
-                'message': 'Cập nhật danh mục thành công'
-            }, status=status.HTTP_200_OK)
+        category.category_name=request.data.get("category_name")
+        category.image=request.data.get("image")
+        category.save()
+        return Response({
+            'message': 'Cập nhật danh mục thành công'
+        }, status=status.HTTP_200_OK)
             
-        return ErrorResponse({
-            'message': 'Dữ liệu không hợp lệ',
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+    except CategoryModel.DoesNotExist:
+        return ErrorResponse({'message': 'Danh mục không tồn tại'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'error_message': str(e),

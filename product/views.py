@@ -59,9 +59,9 @@ def similar(request):
 @user_required  
 def search(request):
     try:
-        slug=request.GET.get('slug','').lower()
-        product=ProductModel.objects.get(slug=slug)
-        product_serializer=searchProductSerializer(product)
+        keyword=request.GET.get('keyword','').lower()
+        product=ProductModel.objects.filter(product_name__icontains=keyword)
+        product_serializer=searchProductSerializer(product,many=True)
         return SuccessResponse({
             'data': product_serializer.data
         }, status=status.HTTP_200_OK)

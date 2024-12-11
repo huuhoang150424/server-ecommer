@@ -113,12 +113,12 @@ class FavoriteProductModel(models.Model):
     user = models.ForeignKey(
         Users, 
         on_delete=models.CASCADE, 
-        related_name='favoriteProduct'  
+        related_name='favorite_product'  
     )
     product = models.ForeignKey(
         ProductModel, 
         on_delete=models.CASCADE, 
-        related_name='favoriteProduct'  
+        related_name='favorite_product'  
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

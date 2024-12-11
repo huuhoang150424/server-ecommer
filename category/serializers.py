@@ -38,14 +38,3 @@ class GetCatSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Danh mục không tồn tại")
         return validated_data
 
-class updateCatSerializers(serializers.ModelSerializer):
-    category_name=serializers.CharField(max_length=50,write_only=True)
-    class Meta:
-        model=CategoryModel
-        fields=['category_name','image']
-
-    def validate(self,validated_data):
-        catId=self.context.get('catId')
-        if not CategoryModel.objects.filter(id=catId).exists():
-            raise serializers.ValidationError("Danh mục không tồn tại")
-        return validated_data
