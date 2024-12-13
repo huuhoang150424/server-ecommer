@@ -13,10 +13,13 @@ def addCart(request):
     try:
         user_id = request.user.id  
         product_id = request.data.get('product_id') 
-        quantity = int(request.data.get('quantity', 1)) 
+        quantity = int(request.data.get('quantity')) 
 
         product = ProductModel.objects.get(id=product_id)
         
+        if quantity<=0:
+            return ErrorResponse({'message': 'Số lượng sản phẩm phải lớn hơn 0'}, status=status.HTTP_400_BAD_REQUEST)
+
         if product.stock < quantity:
             return ErrorResponse({'message': 'Không đủ số lượng sản phẩm trong kho'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -36,7 +39,13 @@ def addCart(request):
             cart=cart_instance, 
             product_id=product_id
         )
+
+
         if not created:
+
+            if cart_item.quantity>=product.stock:
+                return ErrorResponse({'message': 'Số lượng sản phẩm không đủ'}, status=status.HTTP_400_BAD_REQUEST)
+    
             cart_item.quantity += quantity
             cart_item.save()
             return SuccessResponse({
