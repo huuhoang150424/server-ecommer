@@ -45,7 +45,11 @@ def login(request):
                     'id': str(user.id),
                     'name': user.name,
                     'email': user.email,
-                    'avatar': user.avatar
+                    'avatar': user.avatar,
+                    'address': user.address,
+                    'birth_date': user.birth_date,
+                    'gender': user.gender,
+                    'phone': user.phone,
                 },
                 'accessToken': token['accessToken']
             },
@@ -128,12 +132,42 @@ def forgotPassword(request):
         )
 
 @api_view(['PATCH'])
-@user_required
+@user_required 
 def changePassword(request):
-    try: 
-        pass
+    try:
+        old_password = request.data.get('oldPassword')
+        new_password = request.data.get('newPassword')
+        confirm_password = request.data.get('confirmPassword')
+        user_id=request.user.id
+        user = Users.objects.get(id=user_id)
+
+        if not check_password(old_password, user.password):
+            return ErrorResponse(error_message="Mật khẩu cũ không đúng", status=status.HTTP_400_BAD_REQUEST)
+        if new_password != confirm_password:
+            return ErrorResponse(error_message="Mật khẩu xác nhận không khớp", status=status.HTTP_400_BAD_REQUEST)
+        user.password = make_password(new_password)
+        user.save()
+        return Response({"message": "Mật khẩu đã được thay đổi thành công!"}, status=status.HTTP_200_OK)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Tài khoản không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PATCH'])
+@user_required 
+def changePhone(request):
+    try:
+        phone = request.data.get('phone')
+        user_id=request.user.id
+        user = Users.objects.get(id=user_id)
+        user.phone =phone
+        user.save()
+        return SuccessResponse({"message": "Số điện thoại đã được thay đổi thành công!"}, status=status.HTTP_200_OK)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Người dùng không tồn tại", status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['PATCH'])
 def resetPassword(request):
@@ -191,11 +225,22 @@ def createUser(request):
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 @api_view(['GET'])
 @user_required
 def getUser(request):
-    try: 
-        pass
+    try:
+        user_id=request.user.id
+        user = Users.objects.get(id=user_id)
+        serializers=getUserSeriaLizer(user)
+
+        return SuccessResponse(
+            {'message': 'Thành công','data': serializers.data}, 
+            status=status.HTTP_200_OK
+        )
+
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Tài khoản không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -205,11 +250,6 @@ def getUser(request):
 @admin_required
 def deleteUser(request,id):
     try: 
-        if not Users.objects.filter(id=id).exists():
-            return ErrorResponse(
-                {'message': 'Người dùng không tồn tại'},
-                status=status.HTTP_404_NOT_FOUND
-            )
         if Users.objects.filter(id=id,isAdmin=True).exists():
             return ErrorResponse(
                 {'message': 'Không thể xóa Admin'},
@@ -220,6 +260,8 @@ def deleteUser(request,id):
         return SuccessResponse({
             'message': 'Xóa người dùng thàng công'
         },status=status.HTTP_200_OK)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Người dùng không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -244,9 +286,35 @@ def updateUser(request,id):
             'message': 'Dữ liệu không hợp lệ',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-    except CategoryModel.DoesNotExist:
-        return Response({
-            'message': 'Người dùng không tồn tại'
-        }, status=status.HTTP_404_NOT_FOUND)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Người dùng không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['PUT'])
+@admin_required
+def updateProfile(request):
+    try:
+        user_id = request.user.id
+        user = Users.objects.get(id=user_id)
+        serializer = UpdateProfileSerializer(
+            instance=user,
+            data=request.data,
+            partial=True  # Cho phép cập nhật một phần thông tin
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return SuccessResponse({
+                'message': 'Cập nhật thông tin người dùng thành công',
+                'data': serializer.data
+            }, status=status.HTTP_200_OK)
+        return ErrorResponse({
+            'message': 'Dữ liệu không hợp lệ',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Người dùng không tồn tại", status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e),  status=status.HTTP_500_INTERNAL_SERVER_ERROR )

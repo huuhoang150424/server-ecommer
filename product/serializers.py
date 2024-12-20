@@ -246,6 +246,9 @@ class productFavorite(serializers.ModelSerializer):
         return FavoriteProductModel.objects.create(**data)
 
 class getAllProductFavorite(serializers.ModelSerializer):
+    product=getProductSerializer(read_only=True)
+
+
     class Meta:
         model = FavoriteProductModel
         fields = ['id', 'user', 'product']

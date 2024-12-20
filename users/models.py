@@ -1,6 +1,6 @@
 from django.db import models
 import uuid
-
+from django.utils import timezone
 
 class Gender(models.TextChoices):
     MALE = 'Male', 'Nam'
@@ -21,16 +21,23 @@ class Users(models.Model):
         choices=Gender.choices, 
         default=Gender.OTHER
     )
-
+    phone = models.CharField(
+        max_length=10,  
+        null=True, 
+        blank=True,
+        default=123457890
+    )
     isAdmin = models.BooleanField(default=False, null=True)
     avatar = models.CharField(
         max_length=150, 
         default='https://res.cloudinary.com/dw3oj3iju/image/upload/v1709749732/chat_app/b1rj7epnhdqo6t7mcu5w.jpg'
     )
-    address = models.TextField(  # Trường địa chỉ
+    address = models.JSONField(default=list)
+
+    birth_date = models.DateField(
         null=True, 
-        blank=True, 
-        default="Chưa cập nhật"
+        blank=True,
+        default=timezone.now
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

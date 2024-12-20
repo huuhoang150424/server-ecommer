@@ -73,21 +73,13 @@ def getCat(request, catId):
     try:
         category = CategoryModel.objects.get(id=catId)
         serializer = GetCatSerializer(category, context={'catId': catId})
-        if serializer.is_valid():
-            return SuccessResponse({
-                'data': serializer.data,
-                'message': 'Danh mục được tìm thấy'
-            }, status=status.HTTP_200_OK)
-        return ErrorResponse({
-            'message': 'Thất bại',
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
-        
+        return SuccessResponse({
+            'data': serializer.data,
+        }, status=status.HTTP_200_OK)
+    except Users.DoesNotExist:
+        return ErrorResponse(error_message="Danh mục không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({
-            'error_message': str(e),
-            'message': 'Đã xảy ra lỗi trong quá trình xử lý'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return ErrorResponse(error_message="Lỗi không xác định", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['PUT'])
 @admin_required

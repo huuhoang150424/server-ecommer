@@ -313,7 +313,9 @@ def removeFavoriteProduct(request):
 def getAllFavoriteProduct(request):
     try:
         user = request.user
-        allFavoriteProduct=FavoriteProductModel.objects.filter(user=user)
+        allFavoriteProduct=FavoriteProductModel.objects.prefetch_related('product').filter(user=user)
+
+
         serializers=getAllProductFavorite(allFavoriteProduct,many=True)
         return SuccessResponse(
             {'message': 'Thành công', 'data': serializers.data}, 

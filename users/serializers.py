@@ -80,7 +80,13 @@ class LoginWithGoogleSeriaLizer(serializers.ModelSerializer):
 class getAllUserSeriaLizer(serializers.ModelSerializer):
     class Meta:
         model = Users
-        fields = ['id','name', 'email','gender','avatar','isAdmin']
+        fields = ['id','name', 'email','gender','avatar','isAdmin','address']
+
+
+class getUserSeriaLizer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = ['id','name', 'email','gender','avatar','isAdmin','address','phone','birth_date']
 
 class createUserSeriaLizer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=50) 
@@ -127,6 +133,20 @@ class updateUserSeriaLizer(serializers.ModelSerializer):
         if not Users.objects.filter(id=id).exists():
             raise serializers.ValidationError('Người dùng không tồn tại')
         return data
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=50)
+    name = serializers.CharField(max_length=20)
+    gender = serializers.ChoiceField(choices=Users._meta.get_field('gender').choices)
+    avatar = serializers.CharField(max_length=150)
+
+    class Meta:
+        model = Users
+        fields = ['name', 'email', 'gender', 'avatar', 'birth_date']
+
+
+
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
@@ -206,32 +226,3 @@ class ResetPasswordSerializer(serializers.Serializer):
         user.password = make_password(data['password'])
         user.save()
         return user
-
-
-
-
-class changePasswordSeriaLizer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=254) 
-    password=serializers.CharField(max_length=50,write_only=True)
-    oldPassword=serializers.CharField(max_length=50,write_only=True)
-    confirmPassword=serializers.CharField(max_length=50,write_only=True)
-
-    class Meta:
-        model = Users
-        fields = ['email', 'password', 'oldPassword', 'confirmPassword']
-
-    def validate(self, data):
-        findUser = Users.objects.filter(email=data['email']).first()
-        if not findUser:
-            raise serializers.ValidationError('Tài khoản không tồn tại')
-        if not check_password(data['oldPassword'], findUser.password):
-            raise serializers.ValidationError('Mật khẩu không đúng')
-        if data['password']!=data['confirmPassword']:
-            raise serializers.ValidationError('Xác nhận mật khẩu không chính xác')
-        return data
-    def create(self, data):
-        data.pop('oldPassword')  
-        data.pop('confirmPassword')  
-        data['password'] = make_password(data['password'])  
-        new_user = Users.objects.create(**data)  
-        return new_user

@@ -50,13 +50,16 @@ INSTALLED_APPS = [
     'product',
     'cart',
     'utils',
-    'warehouse'
+    'warehouse',
+    'drf_yasg' #swagger
 ]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema',  
 }
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=100000),  
     'REFRESH_TOKEN_LIFETIME': timedelta(days=365),  
@@ -64,6 +67,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,  # Đánh dấu token cũ là không hợp lệ sau khi xoay vòng
     'SIGNING_KEY': 'TOKEN_KEY123'
 }
+
 #config send mail
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # Hoặc SMTP của nhà cung cấp email khác
@@ -71,6 +75,16 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'nguyenhoanghuu15042004@gmail.com'  # Email bạn dùng để gửi
 EMAIL_HOST_PASSWORD = 'evgqtcaxqrssahme'  # Mật khẩu hoặc App Password
+
+# settings.py
+
+MOMO_API_URL = "https://test-payment.momo.vn/gw_payment/transactionProcessor"
+MOMO_PARTNER_CODE = "YOUR_PARTNER_CODE"  # Partner Code của bạn
+MOMO_ACCESS_KEY = "YOUR_ACCESS_KEY"  # Access Key của bạn
+MOMO_SECRET_KEY = "YOUR_SECRET_KEY"  # Secret Key của bạn
+MOMO_ORDER_INFO = "Thanh toán đơn hàng MoMo"  # Mô tả đơn hàng
+
+
 
 
 MIDDLEWARE = [
@@ -87,10 +101,14 @@ MIDDLEWARE = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [ 
-    'http://localhost:5173',
-    'https://localhost:3000',
-]
+CORS_ALLOW_ALL_ORIGINS = True
+
+
+# CORS_ALLOWED_ORIGINS = [ 
+#     'http://localhost:5173',
+#     'https://localhost:3000',
+#     "http://<random_subdomain>.ngrok.io", 
+# ]
 
 CORS_ALLOW_HEADERS = [
     'content-type',
