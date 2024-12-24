@@ -85,9 +85,9 @@ class orderDetailModel(models.Model):
 
 class StatusModel(models.TextChoices):
     PROCESSING = 'PROCESSING', 'Đang xử lý'
-    SHIPPED = 'SHIPPED', 'Đã giao'
-    DELIVERED = 'DELIVERED', 'Đã giao hàng'
+    SHIPPED = 'SHIPPED', 'Đang giao'
     CANCELLED = 'CANCELLED', 'Hủy'
+    RECEIVED='RECEIVED','Đã nhận hàng'
 class orderHistoryModel(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -110,11 +110,10 @@ class orderHistoryModel(models.Model):
         related_name='order_histories'
     )
     changed_at = models.DateTimeField(auto_now=True)
-
+    end_time = models.DateTimeField(null=True, blank=True)
     class Meta:
         db_table = 'order_history'
 
 
     def __str__(self):
         return f"{self.id} {self.status} {self.order}"
-    

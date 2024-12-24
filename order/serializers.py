@@ -1,5 +1,5 @@
 from rest_framework  import serializers
-from .models import orderDetailModel,orderModel
+from .models import orderDetailModel,orderModel,orderHistoryModel
 from users.serializers import getUserSeriaLizer
 from product.models import ProductModel
 from category.serializers import GetCatSerializer
@@ -38,6 +38,41 @@ class OrderByUserSerializer(serializers.ModelSerializer):
     order_details = OrderDetailSerializer(many=True, read_only=True) 
     class Meta:
         model = orderModel
-        fields = ['id', 'total_amount', 'status', 'created_at', 'order_details','shipping_address','receiver_name','receiver_phone']
+        fields = ['id', 'total_amount', 'status', 'created_at', 'order_details','shipping_address','receiver_name','receiver_phone','order_code']
     def get_order_details(self, obj):
         return obj
+
+class OrderHistoryByUserSerializer(serializers.ModelSerializer):
+    order = OrderByUserSerializer( read_only=True) 
+    class Meta:
+        model = orderHistoryModel
+        fields = [ 'id',  'status',  'changed_at',  'order', 'end_time']
+    def get_order_details(self, obj):
+        return obj
+
+class OrderHistoryByOrderSerializer(serializers.ModelSerializer):
+    change_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = orderHistoryModel
+        fields = ['id', 'status', 'changed_at', 'order', 'end_time', 'change_by']
+
+    def get_change_by(self, obj):
+        user = obj.change_by
+        if user:
+            return {
+                'id': user.id,
+                'name': user.name,
+                'email': user.email
+            }
+        return None
+
+
+
+class OrderHistorySerializer(serializers.ModelSerializer):
+    order_histories = OrderHistoryByOrderSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = orderModel
+        fields = ['id', 'order_histories']
+

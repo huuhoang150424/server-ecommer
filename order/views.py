@@ -21,7 +21,7 @@ from django.conf import settings
 from rest_framework.response import Response
 from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
-
+import datetime
 
 @api_view(['POST'])
 @user_required
@@ -75,13 +75,17 @@ def createOrderCod(request):
                 receiver_name=receiver_name,
                 receiver_phone=receiver_phone
             )
-
+            orderHistoryModel.objects.create(
+                status=StatusModel.PROCESSING,
+                order=order,
+                change_by=request.user
+            )
             for item in cartItems:
                 cart_item_instance = cartItemModel.objects.get(id=item['id'])
                 orderDetailModel.objects.create(
                     order=order,
                     product=cart_item_instance.product,
-                    price=item['product']['price'],
+                    price=item['product']['price']*item['quantity'],
                     quantity=item['quantity']
                 )
                 cart_item_instance.delete()
@@ -237,19 +241,6 @@ def getOrderByUser(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@user_required  
-def getAllOrdersHistory(request):
-    try:
-
-        return SuccessResponse({
-            'message': 'Thành công'
-        }, status=status.HTTP_200_OK)
-
-    except Exception as e:
-        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 
 
@@ -267,27 +258,257 @@ def createOrderMomo(request):
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+@api_view(['GET'])
+@user_required
+def findOrder(request, id):
+    try:
+        user = request.user
+        order = orderModel.objects.filter(id=id, user=user).first()
+
+        return SuccessResponse({"message": "Thành công"},status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#handle order history
 @api_view(['POST'])
-@user_required  
-def confirmPayment(request):
+@user_required
+def destroyOrders(request, id):
     try:
+        user = request.user
+        order = orderModel.objects.filter(id=id, user=user).first()
+        if not order:
+            return ErrorResponse(
+                {"error_message": "Đơn hàng không tồn tại hoặc bạn không có quyền hủy đơn này."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if order.status == statusOrderModel.CONFIRMED:
+            return ErrorResponse(
+                {"error_message": "Đơn hàng đã được xác nhận, không thể hủy."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if order.status == statusOrderModel.NOT_CONFIRMED and order.order_histories.filter(status=StatusModel.CANCELLED).exists():
+            return ErrorResponse(
+                {"error_message": "Đơn hàng đã bị hủy trước đó."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        currentHistory = orderHistoryModel.objects.filter(
+            order=order,
+            changed_at__isnull=False,
+            status__in=[StatusModel.PROCESSING],
+        ).order_by("-changed_at").first()
+        if currentHistory:
+            currentHistory.end_time = datetime.datetime.now()  
+            currentHistory.save()
 
-        return SuccessResponse({
-            'message': 'Thành công'
-        }, status=status.HTTP_200_OK)
+        orderHistoryModel.objects.create(
+            status=StatusModel.CANCELLED,
+            order=order,
+            change_by=user
+        )
+        return SuccessResponse({"message": "Hủy đơn hàng thành công"},status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@admin_required
+def confirmOrder(request, id):
+    try:
+        order = orderModel.objects.get(id=id)
+        if order.status != statusOrderModel.NOT_CONFIRMED:
+            return ErrorResponse(
+                {"error_message": "Đơn hàng không thể xác nhận."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if order.order_histories.filter(status=StatusModel.CANCELLED).exists():
+            return ErrorResponse(
+                {"error_message": "Đơn hàng đã bị hủy không thể xác nhận."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order.status = statusOrderModel.CONFIRMED
+        order.save()
+        currentHistory = orderHistoryModel.objects.filter(
+            order=order,
+            changed_at__isnull=False,
+            status__in=[StatusModel.PROCESSING],
+        ).order_by("-changed_at").first()
+        if currentHistory:
+            currentHistory.end_time = datetime.datetime.now()  
+            currentHistory.save()
+        orderHistoryModel.objects.create(
+            status=StatusModel.SHIPPED,
+            order=order,
+            change_by=request.user
+        )
+        return SuccessResponse(
+            {"message": "Xác nhận đơn hàng thành công."},
+            status=status.HTTP_200_OK
+        )
+    except orderModel.DoesNotExist:
+        return ErrorResponse(error_message="Đơn hàng không tồn tại.",status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return ErrorResponse(error_message= str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['POST'])
+@user_required
+def receivedOrder(request, id):
+    try:
+        user = request.user
+        order = orderModel.objects.filter(id=id, user=user).first()
+        if not order:
+            return ErrorResponse(
+                {"error_message": "Đơn hàng không tồn tại hoặc bạn không có quyền xác nhận đơn này."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if order.status == statusOrderModel.NOT_CONFIRMED:
+            return ErrorResponse(
+                {"error_message": "Đơn hàng chưa được xác nhận."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not order.order_histories.filter(status=StatusModel.SHIPPED).exists():
+            return ErrorResponse(
+                {"error_message": "Đơn hàng chưa được giao."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if order.order_histories.filter(status=StatusModel.RECEIVED).exists():
+            return ErrorResponse(
+                {"error_message": "Đơn hàng đã được xác nhận là 'Đã nhận hàng' trước đó."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        currentHistory = orderHistoryModel.objects.filter(
+            order=order,
+            changed_at__isnull=False,
+            status__in=[StatusModel.SHIPPED],
+        ).order_by("-changed_at").first()
+        
+        if currentHistory:
+            currentHistory.end_time = datetime.datetime.now()  
+            currentHistory.save()
+        orderHistoryModel.objects.create(
+            status=StatusModel.RECEIVED,
+            order=order,
+            change_by=user
+        )
+        return SuccessResponse(
+            {"message": "Xác nhận đã nhận hàng thành công."},
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse(
+            {"error_message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+
+#get orderhistory
+@api_view(['GET'])
+@user_required
+def getOrderDestroy(request):
+    try:
+        user = request.user
+        cancelled_orders = orderHistoryModel.objects.filter(
+            order__user=user,
+            status=StatusModel.CANCELLED,
+            end_time__isnull=True
+        ).select_related('order')
+
+        serializer = OrderHistoryByUserSerializer(cancelled_orders, many=True)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data}, 
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e), 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@user_required
+def getOrderShipped(request):
+    try:
+        user = request.user
+        cancelled_orders = orderHistoryModel.objects.filter(
+            order__user=user,
+            status=StatusModel.SHIPPED,
+            end_time__isnull=True
+        ).select_related('order')
+
+        serializer = OrderHistoryByUserSerializer(cancelled_orders, many=True)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data}, 
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@user_required
+def getOrderProcessing(request):
+    try:
+        user = request.user
+        cancelled_orders = orderHistoryModel.objects.filter(
+            order__user=user,
+            status=StatusModel.PROCESSING,
+            end_time__isnull=True
+        ).select_related('order')
+
+        serializer = OrderHistoryByUserSerializer(cancelled_orders, many=True)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data}, 
+            status=status.HTTP_200_OK
+        )
 
     except Exception as e:
-        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-@api_view(['DELETE'])
-@user_required  
-def destroyOrders(request):
+@api_view(['GET'])
+@user_required
+def getOrderReceived(request):
     try:
+        user = request.user
+        cancelled_orders = orderHistoryModel.objects.filter(
+            order__user=user,
+            status=StatusModel.RECEIVED,
+            end_time__isnull=True
+        ).select_related('order')
 
-        return SuccessResponse({
-            'message': 'Thành công'
-        }, status=status.HTTP_200_OK)
-
+        serializer = OrderHistoryByUserSerializer(cancelled_orders, many=True)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data}, 
+            status=status.HTTP_200_OK
+        )
     except Exception as e:
-        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@user_required
+def getOrderHistory(request, id):
+    try:
+        user = request.user
+        order = orderModel.objects.filter(
+            id=id,
+            user=user
+        ).prefetch_related('order_histories__change_by').first()
+
+        if not order:
+            return ErrorResponse(
+                {"error_message": "Hóa đơn không tồn tại hoặc bạn không có quyền truy cập."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = OrderHistorySerializer(order)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
