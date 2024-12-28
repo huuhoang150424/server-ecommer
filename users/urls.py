@@ -20,4 +20,6 @@ urlpatterns = [
     path("resetPassword",resetPassword,name="resetPassword"),
     path("deleteUser/<uuid:id>",deleteUser,name="deleteUser"),
     path("updateUser/<uuid:id>",updateUser,name="updateUser"),
+    path("addAddress",addAddress,name="addAddress"),
+    path("deleteAddress",deleteAddress,name="deleteAddress"),
 ]

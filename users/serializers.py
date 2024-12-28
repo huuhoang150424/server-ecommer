@@ -140,7 +140,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=20)
     gender = serializers.ChoiceField(choices=Users._meta.get_field('gender').choices)
     avatar = serializers.CharField(max_length=150)
-
+    birth_date=serializers.DateField()
     class Meta:
         model = Users
         fields = ['name', 'email', 'gender', 'avatar', 'birth_date']

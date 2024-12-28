@@ -294,7 +294,7 @@ def updateUser(request,id):
 
 
 @api_view(['PUT'])
-@admin_required
+@user_required
 def updateProfile(request):
     try:
         user_id = request.user.id
@@ -318,3 +318,64 @@ def updateProfile(request):
         return ErrorResponse(error_message="Người dùng không tồn tại", status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e),  status=status.HTTP_500_INTERNAL_SERVER_ERROR )
+
+@api_view(['PATCH'])
+@user_required
+def addAddress(request):
+    try:
+        user_id = request.user.id
+        user = Users.objects.get(id=user_id)
+        address = request.data.get("address")
+        
+        if not address:
+            return ErrorResponse(
+                error_message="Địa chỉ không được để trống", 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if address in user.address:
+            return ErrorResponse(
+                error_message="Địa chỉ này đã tồn tại", 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user.address.append(address)
+        user.save()
+        
+        return SuccessResponse({
+            'message': 'Thêm mới địa chỉ thành công',
+            'updated_address_list': user.address
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e), 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['PATCH'])
+@user_required
+def deleteAddress(request):
+    try:
+        user_id = request.user.id
+        user = Users.objects.get(id=user_id)
+        addressRemove = request.data.get("address")
+        if not addressRemove:
+            return ErrorResponse(
+                error_message="Địa chỉ cần xóa không được để trống", 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if addressRemove not in user.address:
+            return ErrorResponse(
+                error_message="Địa chỉ không tồn tại trong danh sách", 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user.address.remove(addressRemove)
+        user.save()
+        return SuccessResponse({
+            'message': 'Xóa địa chỉ thành công',
+            'updated_address_list': user.address
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e), 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
