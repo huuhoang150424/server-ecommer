@@ -8,7 +8,7 @@ from utils.response import SuccessResponse,ErrorResponse
 from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
 from .models import ProductModel,AttributesModel
-
+from category.models import CategoryModel
 
 
 @api_view(['GET'])
@@ -60,10 +60,14 @@ def similar(request):
 def search(request):
     try:
         keyword=request.GET.get('keyword','').lower()
-        product=ProductModel.objects.filter(product_name__icontains=keyword)
-        product_serializer=searchProductSerializer(product,many=True)
+        products=ProductModel.objects.filter(product_name__icontains=keyword)
+        product_serializer=searchProductSerializer(products,many=True)
+        
+        list_keyword = [product.product_name for product in products]
+        print(list_keyword)
         return SuccessResponse({
-            'data': product_serializer.data
+            'data': product_serializer.data,
+            'keyword': list_keyword
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -325,4 +329,37 @@ def getAllFavoriteProduct(request):
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+#filter
+@api_view(['GET'])
+@user_required
+def getProductByCategory(request, categoryId):
+    try:
+        products = ProductModel.objects.filter(category_id=categoryId)  
+        serializers = getProductSerializer(products, many=True)
+        return SuccessResponse( {'message': 'Thành công', 'data': serializers.data}, status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse( error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['GET'])
+@user_required
+def getProductByPrice(request, categoryId):
+    try:
+        products = ProductModel.objects.filter(category_id=categoryId)  
+        serializers = getProductSerializer(products, many=True)
+        return SuccessResponse( {'message': 'Thành công', 'data': serializers.data}, status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse( error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@user_required
+def getProductByRating(request, categoryId):
+    try:
+        products = ProductModel.objects.filter(category_id=categoryId)  
+        serializers = getProductSerializer(products, many=True)
+        return SuccessResponse( {'message': 'Thành công', 'data': serializers.data}, status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse( error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)

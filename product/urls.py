@@ -24,4 +24,7 @@ urlpatterns = [
     #search product
     path("similar",similar,name="similar"),
     path("search",search,name="search"),
+
+    #filter product
+    path("<uuid:categoryId>/category",getProductByCategory,name="getProductByCategory"),
 ]
