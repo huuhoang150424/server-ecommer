@@ -12,7 +12,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from utils.pagination import CustomPagination
 from .decorator import admin_required,user_required
 from utils.response import SuccessResponse,ErrorResponse
-
+from django.db.models import Count
 from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
 from django.conf import settings
@@ -379,3 +379,19 @@ def deleteAddress(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+@api_view(['GET'])
+@admin_required
+def getUserBuyProductSoMuch(request):
+    try:
+        users = Users.objects.annotate(order_count=Count('orders')).order_by('-order_count')[:20]
+        serializer = GetUserBuyProductSoMuchSerializer(users, many=True)
+        return SuccessResponse({
+            'message': 'Thành công',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e), 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

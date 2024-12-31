@@ -124,3 +124,26 @@ def deleteComment(request, id):
         return ErrorResponse({'message': 'Bình luận không tồn tại'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET'])
+@admin_required
+def getProductReviews(request):
+    try:
+        ratings = RatingModel.objects.all().select_related('user', 'product')
+        paginator = CustomPagination()
+        paginated_data = paginator.paginate_queryset(ratings, request)
+        if paginated_data is None:  
+            review_serializer = getReviewSerializer(ratings, many=True)
+            return SuccessResponse({
+                'totalItems': len(ratings),
+                'currentPage': 1,
+                'totalPages': 1,
+                'pageSize': len(ratings),
+                'data': review_serializer.data
+            },status=status.HTTP_200_OK)
+        review_serializer = getReviewSerializer(paginated_data, many=True)
+        return paginator.get_pagination_response(review_serializer.data)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

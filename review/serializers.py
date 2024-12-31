@@ -52,3 +52,31 @@ class getRatingSerializer(serializers.ModelSerializer):
         return {
             'id': obj.user.id 
         }
+
+class getReviewSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    product = serializers.SerializerMethodField()
+    comment = serializers.SerializerMethodField()
+    class Meta:
+        model = RatingModel
+        fields = ['product', 'user', 'rating', 
+        'comment'
+        ]
+
+    def get_user(self, obj):
+        return {
+            'avatar': obj.user.avatar,
+            'name': obj.user.name
+        }
+
+    def get_product(self, obj):
+        return {
+            'product_name': obj.product.product_name,
+            'thumb_image': obj.product.thumb_image
+        }
+
+    def get_comment(self, obj):
+        comment = CommentModel.objects.filter(
+            product=obj.product, user=obj.user
+        ).first() 
+        return comment.comment if comment else ""

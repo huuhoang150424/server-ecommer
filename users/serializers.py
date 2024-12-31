@@ -2,7 +2,6 @@ from rest_framework  import serializers
 from django.contrib.auth.hashers import make_password,check_password
 from .models import Users
 from django.forms.models import model_to_dict
-
 from django.utils.crypto import get_random_string
 from django.utils.timezone import now, timedelta
 from django.core.mail import send_mail
@@ -226,3 +225,11 @@ class ResetPasswordSerializer(serializers.Serializer):
         user.password = make_password(data['password'])
         user.save()
         return user
+
+
+class GetUserBuyProductSoMuchSerializer(serializers.ModelSerializer):
+    order_count = serializers.IntegerField()
+
+    class Meta:
+        model = Users
+        fields = ['name', 'email', 'avatar', 'order_count']

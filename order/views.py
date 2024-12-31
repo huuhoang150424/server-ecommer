@@ -22,6 +22,10 @@ from rest_framework.response import Response
 from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
 import datetime
+from django.db.models import Sum
+
+
+
 
 @api_view(['POST'])
 @user_required
@@ -512,3 +516,21 @@ def getOrderHistory(request, id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+#statistical
+
+@api_view(['GET'])
+@admin_required
+def getRevenueForTheYear(request, year):
+    try:
+        orders = orderModel.objects.filter(created_at__year=year)
+        result = [{'name': f'T{month}', 'total_revenue': 0} for month in range(1, 13)]
+        for order in orders:
+            month = order.created_at.month
+            result[month - 1]['total_revenue'] += order.total_amount
+        return SuccessResponse({
+            'message': 'Thành công',
+            'data': result,
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse( error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

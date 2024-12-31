@@ -22,4 +22,7 @@ urlpatterns = [
     path("updateUser/<uuid:id>",updateUser,name="updateUser"),
     path("addAddress",addAddress,name="addAddress"),
     path("deleteAddress",deleteAddress,name="deleteAddress"),
+
+    #statistical
+    path("statisticalUser",getUserBuyProductSoMuch,name="statisticalUser"),
 ]

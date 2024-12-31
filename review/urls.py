@@ -9,4 +9,6 @@ urlpatterns = [
     path("getCommentProduct/<uuid:productId>",getCommentProduct,name="getCommentProduct"),
     path("updateComment/<uuid:id>",updateComment,name="updateComment"),
     path("deleteComment/<uuid:id>",deleteComment,name="deleteComment"),
+
+    path("getAllReview",getProductReviews,name="getAllReview"),
 ]
