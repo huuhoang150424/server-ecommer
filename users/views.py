@@ -378,20 +378,3 @@ def deleteAddress(request):
             error_message=str(e), 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-
-@api_view(['GET'])
-@admin_required
-def getUserBuyProductSoMuch(request):
-    try:
-        users = Users.objects.annotate(order_count=Count('orders')).order_by('-order_count')[:20]
-        serializer = GetUserBuyProductSoMuchSerializer(users, many=True)
-        return SuccessResponse({
-            'message': 'Thành công',
-            'data': serializer.data
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        return ErrorResponse(
-            error_message=str(e), 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )

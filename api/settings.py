@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'cart',
     'utils',
     'warehouse',
+    'analysis',
     'drf_yasg' #swagger
 ]
 REST_FRAMEWORK = {

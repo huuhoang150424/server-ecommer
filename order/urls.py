@@ -17,8 +17,4 @@ urlpatterns = [
     path("getOrderHistory/<uuid:id>",getOrderHistory,name="getOrderHistory"),
     path("momo",createOrderMomo,name="momo"),
 
-    #statistical
-    path("getRevenueForTheYear/<int:year>", getRevenueForTheYear, name="getRevenueForTheYear"),
-
-
 ]

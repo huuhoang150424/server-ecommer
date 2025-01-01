@@ -225,11 +225,3 @@ class ResetPasswordSerializer(serializers.Serializer):
         user.password = make_password(data['password'])
         user.save()
         return user
-
-
-class GetUserBuyProductSoMuchSerializer(serializers.ModelSerializer):
-    order_count = serializers.IntegerField()
-
-    class Meta:
-        model = Users
-        fields = ['name', 'email', 'avatar', 'order_count']
