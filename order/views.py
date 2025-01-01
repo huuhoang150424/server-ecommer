@@ -274,7 +274,7 @@ def findOrder(request, id):
         return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #handle order history
-@api_view(['POST'])
+@api_view(['PUT'])
 @user_required
 def destroyOrders(request, id):
     try:
@@ -313,7 +313,7 @@ def destroyOrders(request, id):
     except Exception as e:
         return ErrorResponse(error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @admin_required
 def confirmOrder(request, id):
     try:
@@ -355,7 +355,7 @@ def confirmOrder(request, id):
 
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @user_required
 def receivedOrder(request, id):
     try:
@@ -505,6 +505,25 @@ def getOrderHistory(request, id):
                 status=status.HTTP_404_NOT_FOUND
             )
         serializer = OrderHistorySerializer(order)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data},
+            status=status.HTTP_200_OK
+        )
+    except Exception as e:
+        return ErrorResponse(
+            error_message=str(e),
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@admin_required
+def getListOrderChange(request, id):
+    try:
+        order = orderHistoryModel.objects.filter(
+            order=id
+        )
+        serializer=ListOrderChangeSerializer(order,many=True)
         return SuccessResponse(
             {"message": "Thành công", "data": serializer.data},
             status=status.HTTP_200_OK

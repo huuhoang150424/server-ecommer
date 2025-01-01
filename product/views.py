@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
 from .models import ProductModel,AttributesModel
 from category.models import CategoryModel
+from django.db.models import Q
 
 
 @api_view(['GET'])
@@ -328,11 +329,10 @@ def getAllFavoriteProduct(request):
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 #filter
 @api_view(['GET'])
 @user_required
-def getProductByCategory(request, categoryId):
+def getProductByCat(request, categoryId):
     try:
         products = ProductModel.objects.filter(category_id=categoryId)  
         serializers = getProductSerializer(products, many=True)
@@ -344,22 +344,50 @@ def getProductByCategory(request, categoryId):
 
 @api_view(['GET'])
 @user_required
-def getProductByPrice(request, categoryId):
+def getProductByPrice(request):
     try:
-        products = ProductModel.objects.filter(category_id=categoryId)  
-        serializers = getProductSerializer(products, many=True)
-        return SuccessResponse( {'message': 'Thành công', 'data': serializers.data}, status=status.HTTP_200_OK
+        min_price = request.GET.get('minPrice', None)
+        max_price = request.GET.get('maxPrice', None)
+        if min_price is None or max_price is None:
+            return ErrorResponse(
+                {"ErrorResponse": "Vui lòng cung cấp minPrice và maxPrice"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            min_price = float(min_price)
+            max_price = float(max_price)
+        except ValueError:
+            return ErrorResponse(
+                {"message": "minPrice và maxPrice phải là số hợp lệ"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        products = ProductModel.objects.filter(
+            Q(price__gte=min_price) & Q(price__lte=max_price) 
+        )
+        serializer = searchProductSerializer(products, many=True)
+        return SuccessResponse(
+            {"message": "Thành công", "data": serializer.data},
+            status=status.HTTP_200_OK
         )
     except Exception as e:
-        return ErrorResponse( error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET'])
 @user_required
-def getProductByRating(request, categoryId):
+def getProductByStar(request, countStar):
     try:
-        products = ProductModel.objects.filter(category_id=categoryId)  
-        serializers = getProductSerializer(products, many=True)
-        return SuccessResponse( {'message': 'Thành công', 'data': serializers.data}, status=status.HTTP_200_OK
+        countStar = float(countStar)
+        products = ProductModel.objects.annotate(
+            average_star=Avg('ratings__rating')  
+        ).filter(average_star__gte=countStar)
+        serializer = searchProductSerializer(products, many=True)
+        return Response(
+            {"message": "Thành công", "data": serializer.data},
+            status=status.HTTP_200_OK
         )
     except Exception as e:
-        return ErrorResponse( error_message=str(e),status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"error_message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

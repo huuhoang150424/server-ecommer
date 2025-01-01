@@ -77,3 +77,20 @@ class OrderHistorySerializer(serializers.ModelSerializer):
         fields = ['id', 'order_histories']
 
 
+
+class ListOrderChangeSerializer(serializers.ModelSerializer):
+    change_by = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    class Meta:
+        model = orderHistoryModel
+        fields = ['id','change_by','status','changed_at']
+    def get_change_by(self, obj):
+        user = obj.change_by
+        if user:
+            return {
+                'name': user.name,
+                'avatar': user.avatar
+            }
+        return None
+    def get_status(self, obj):
+            return obj.get_status_display()  # trả về dạng tiếng việt cho status

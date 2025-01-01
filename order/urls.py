@@ -17,4 +17,6 @@ urlpatterns = [
     path("getOrderHistory/<uuid:id>",getOrderHistory,name="getOrderHistory"),
     path("momo",createOrderMomo,name="momo"),
 
+
+    path("getListOrderChange/<uuid:id>",getListOrderChange,name="getListOrderChange"),
 ]
