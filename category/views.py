@@ -7,7 +7,7 @@ from .serializers import *
 from utils.response import SuccessResponse,ErrorResponse
 from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
-
+from django.db.models import Count,Sum
 
 @api_view(['GET'])
 @user_required  
@@ -102,3 +102,15 @@ def updateCat(request,catId):
             'message': 'Đã xảy ra lỗi trong quá trình xử lý'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@api_view(['GET'])
+@user_required
+def getAllClient(request): 
+    try:
+        category = CategoryModel.objects.annotate(product_count=Count('products')).order_by('-product_count')[:5]
+        serializer = GetCatClientSerializer(category,many=True)
+        return SuccessResponse({
+            'data': serializer.data,
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return ErrorResponse(error_message="Lỗi không xác định", status=status.HTTP_500_INTERNAL_SERVER_ERROR)

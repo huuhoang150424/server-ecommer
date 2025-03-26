@@ -40,21 +40,16 @@ def process_order_queue():
 # Xử lý đơn hàng từ hàng đợi
 def process_order(order_data):
     order_id = order_data.get("order_id")
-    # Lấy đơn hàng từ cơ sở dữ liệu
     order = orderModel.objects.get(id=order_id)
-    # Cập nhật trạng thái thanh toán cho đơn hàng
     order.payment_status = PaymentStatus.PENDING
     order.save()
-    # In ra thông tin đơn hàng (có thể thay thế bằng xử lý thanh toán thực tế)
     print(f"Processing order: {order_id}")
-    # Tạo thanh toán cho đơn hàng
     PaymentModel.objects.create(
         order=order,
         payment_method="MOMO",
         payment_status=PaymentStatus.PENDING,
-        transaction_id=str(uuid.uuid4())  # Giao dịch tạm thời
+        transaction_id=str(uuid.uuid4())  
     )
-    # Cập nhật trạng thái thanh toán thành "Đã hoàn thành" sau khi xử lý thành công
     order.payment_status = PaymentStatus.COMPLETED
     order.save()
 

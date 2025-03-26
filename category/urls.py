@@ -7,4 +7,5 @@ urlpatterns = [
     path("getAllCat",getAllCat,name="getAllCat"),
     path("updateCat/<uuid:catId>",updateCat,name="updateCat"),
     path("deleteCat/<uuid:catId>",deleteCat,name="deleteCat"),
+    path("getAllClient",getAllClient,name="getAllClient"),
 ]

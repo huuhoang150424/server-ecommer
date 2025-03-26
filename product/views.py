@@ -9,18 +9,67 @@ from django.core.paginator import Paginator
 from utils.pagination import CustomPagination
 from .models import ProductModel,AttributesModel
 from category.models import CategoryModel
-from django.db.models import Q
+from django.db.models import Q,Max,Count, Subquery, OuterRef,Avg,Min,Q,Exists , Case, When,F,Min
+from review.models import RatingModel
+
+from django_redis import get_redis_connection
+redis_conn = get_redis_connection('default')
+import json
+
+
+
 
 
 @api_view(['GET'])
-@user_required  
+@user_required
+def getProductClient(request, id):
+    try:
+        cache_key = f'product_{id}'
+        cached_product = redis_conn.get(cache_key)
+        
+        if cached_product:
+            return SuccessResponse({
+                'data': json.loads(cached_product.decode('utf-8'))  
+            }, status=status.HTTP_200_OK)
+        product = ProductModel.objects.prefetch_related(
+            'product_attributes__attribute', 'ratings'
+        ).select_related('category').get(id=id)
+        product_serializer = getProductSerializerClient(product, context={'user': request.user})
+        # Chuyển UUID thành chuỗi trước khi lưu vào cache
+        try:
+            redis_conn.setex(cache_key, 3600, json.dumps(product_serializer.data, default=str))
+            print(f"Lưu thành công key vào Redis: {cache_key}")
+        except Exception as redis_error:
+            print(f"Lỗi khi lưu vào Redis: {redis_error}")
+        # default=str giúp chuyển UUID thành chuỗi
+        return SuccessResponse({
+            'data': product_serializer.data
+        }, status=status.HTTP_200_OK)
+    except ProductModel.DoesNotExist:
+        return ErrorResponse(error_message="Sản phẩm không tồn tại", status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@user_required
 def getAllProducts(request):
     try:
-        allProduct=ProductModel.objects.all().order_by('id')
-        paginator=CustomPagination()
-        paginated_data=paginator.paginate_queryset(allProduct, request)
-        if paginated_data is None:  
+        offset = int(request.GET.get('offset', 0))  
+        limit = int(request.GET.get('limit', 10))  
+        cache_key = f'products_{offset}_{limit}'
+        cached_data = redis_conn.get(cache_key)
+        if cached_data:
+            return SuccessResponse({
+                'data': json.loads(cached_data),  
+                'fromCache': True,
+            }, status=status.HTTP_200_OK)
+        allProduct = ProductModel.objects.all().order_by('id')
+        paginator = CustomPagination()
+        paginated_data = paginator.paginate_queryset(allProduct, request)
+        if paginated_data is None:
             product_serializer = getAllProductSerializers(allProduct, many=True)
+            redis_conn.setex(cache_key, 3600, json.dumps(product_serializer.data, default=str))  
             return SuccessResponse({
                 'totalItems': len(allProduct),
                 'currentPage': 1,
@@ -28,10 +77,21 @@ def getAllProducts(request):
                 'pageSize': len(allProduct),
                 'data': product_serializer.data
             })
-
         product_serializer = getAllProductSerializers(paginated_data, many=True)
-        return paginator.get_pagination_response(product_serializer.data)
+        total_items = allProduct.count()
+        page_size = paginator.page_size
+        total_pages = (total_items + page_size - 1) // page_size
+        current_page = paginator.page
+        redis_conn.setex(cache_key, 3600, json.dumps(product_serializer.data, default=str))  
+        return paginator.get_pagination_response({
+            'totalItems': total_items,
+            'currentPage': current_page,
+            'totalPages': total_pages,
+            'pageSize': page_size,
+            'data': product_serializer.data
+        })
     except Exception as e:
+        print(e)
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -79,13 +139,25 @@ def search(request):
 @user_required  
 def getProductRecent(request):
     try:
-        allProduct=ProductModel.objects.order_by('-created_at')[:10]
-        product_serializer=getAllProductRecentSerializers(allProduct,many=True)
+        cache_key = 'recent_products'
+        cached_data = redis_conn.get(cache_key) 
+        
+        if cached_data:
+            return SuccessResponse({
+                'data': json.loads(cached_data)  # Giải mã dữ liệu JSON từ cache
+            }, status=status.HTTP_200_OK)
+        allProduct = ProductModel.objects.order_by('-created_at')[:10]
+        product_serializer = getAllProductRecentSerializers(allProduct, many=True)
+        serialized_data = json.dumps(product_serializer.data, default=str) # chuyển đối tượng thành chuỗi
+        redis_conn.setex(cache_key, 3600, serialized_data)
         return SuccessResponse({
             'data': product_serializer.data
         }, status=status.HTTP_200_OK)
+    
     except Exception as e:
+        print(e)
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET'])
 @user_required  
@@ -100,21 +172,7 @@ def getProduct(request,slug):
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@user_required  
-def getProductClient(request, id):
-    try:
-        product = ProductModel.objects.prefetch_related(
-            'product_attributes__attribute', 'ratings'
-        ).select_related('category').get(id=id)
-        product_serializer = getProductSerializerClient(product, context={'user': request.user})
-        return SuccessResponse({
-            'data': product_serializer.data
-        }, status=status.HTTP_200_OK)
-    except ProductModel.DoesNotExist:
-        return ErrorResponse(error_message="Sản phẩm không tồn tại", status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['POST'])
@@ -372,22 +430,21 @@ def getProductByPrice(request):
     except Exception as e:
         return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+# lấy sản phẩm có đánh giá không thấp hơn countStar
 @api_view(['GET'])
 @user_required
-def getProductByStar(request, countStar):
+def getProductByStar(request):
     try:
-        countStar = float(countStar)
+        countStar = request.GET.get('countStar', None)
         products = ProductModel.objects.annotate(
-            average_star=Avg('ratings__rating')  
-        ).filter(average_star__gte=countStar)
+            min_rating=Min('ratings__rating') #lấy số sao nhỏ nhất của sản phẩm đó
+        ).filter(
+            min_rating__lte=countStar
+        )
         serializer = searchProductSerializer(products, many=True)
-        return Response(
+        return SuccessResponse(
             {"message": "Thành công", "data": serializer.data},
             status=status.HTTP_200_OK
         )
     except Exception as e:
-        return Response(
-            {"error_message": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return ErrorResponse(error_message=str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

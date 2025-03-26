@@ -38,3 +38,8 @@ class GetCatSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Danh mục không tồn tại")
         return validated_data
 
+class GetCatClientSerializer(serializers.ModelSerializer):
+    product_count = serializers.IntegerField()
+    class Meta:
+        model = CategoryModel
+        fields = ['id','category_name', 'product_count']

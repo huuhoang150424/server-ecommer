@@ -28,5 +28,5 @@ urlpatterns = [
     #filter product
     path("<uuid:categoryId>/category",getProductByCat,name="getProductByCategory"),
     path("getProductByPrice",getProductByPrice,name="getProductByPrice"),
-    path("getProductByStar/<int:countStar>",getProductByStar,name="getProductByStar"),
+    path("getProductByStar",getProductByStar,name="getProductByStar"),
 ]
